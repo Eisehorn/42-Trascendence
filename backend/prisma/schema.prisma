@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String  @id @default(cuid())
+  username           String
+  avatar             String
+  points             Int     @default(0)
+  ft_id              Int? // 42 User ID
+  google_id          String? // Google User ID
+  two_factor_secret  String?
+  two_factor_enabled Boolean @default(false)
+
+  friends                String[]
+  blockedUsers           String[]
+  messages               ChatMessage[]
+  wonMatches             Match[]         @relation("winnerRelation")
+  lostMatches            Match[]         @relation("looserRelation")
+  sentFriendRequests     FriendRequest[] @relation("senderRelation")
+  receivedFriendRequests FriendRequest[] @relation("targetRelation")
+}
+
+model ChatChannel {
+  id           String   @id @default(cuid())
+  name         String
+  owner        String
+  password     String?
+  isPrivate    Boolean
+  isDirectChat Boolean
+  admins       String[]
+  members      String[]
+  bannedUsers  String[]
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id      String      @id @default(cuid())
+  sender  User        @relation(fields: [userId], references: [id])
+  date    DateTime    @default(now())
+  message String
+  channel ChatChannel @relation(fields: [channelId], references: [id])
+
+  channelId String
+  userId    String
+}
+
+model ChatMute {
+  id        String   @id @default(cuid())
+  channelId String
+  userId    String
+  until     DateTime
+}
+
+model FriendRequest {
+  id       String @id @default(cuid())
+  sender   User   @relation(fields: [senderId], references: [id], name: "senderRelation")
+  target   User   @relation(fields: [targetId], references: [id], name: "targetRelation")
+  targetId String
+  senderId String
+}
+
+model Match {
+  id String @id @default(cuid())
+
+  winner User @relation(fields: [winnerId], references: [id], name: "winnerRelation")
+  looser User @relation(fields: [looserId], references: [id], name: "looserRelation")
+
+  winnerId String
+  looserId String
+}
